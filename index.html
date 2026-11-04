@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Follow Along Reader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Follow Along Reader</h1>
+    <p class="tagline">Listen, read, and read aloud — a pointer keeps your place.</p>
+  </header>
+
+  <main class="layout">
+    <!-- ===== Source panel ===== -->
+    <section class="panel source" aria-label="Load material">
+      <div class="tabs" role="tablist">
+        <button role="tab" class="tab active" data-tab="audio" aria-selected="true">🎧 Audio → Text</button>
+        <button role="tab" class="tab" data-tab="pdf" aria-selected="false">📄 PDF → Audio</button>
+      </div>
+
+      <!-- Audio → Text -->
+      <div class="tabpanel" id="tab-audio">
+        <label class="file-drop" id="audioDrop">
+          <input type="file" id="audioFile" accept="audio/*,video/*">
+          <span class="file-drop-text"><strong>Choose an audio file</strong> or drop it here<br><small>MP3, WAV, M4A, OGG, even MP4 video</small></span>
+        </label>
+        <audio id="audio" controls preload="metadata" hidden></audio>
+
+        <div class="row">
+          <label>Model
+            <select id="modelSelect">
+              <option value="onnx-community/whisper-tiny.en_timestamped">Fast (English, ~40 MB)</option>
+              <option value="onnx-community/whisper-base_timestamped" selected>Better (multilingual, ~80 MB)</option>
+            </select>
+          </label>
+          <label>Language
+            <select id="langSelect">
+              <option value="">Auto</option>
+              <option value="english">English</option>
+              <option value="spanish">Spanish</option>
+              <option value="french">French</option>
+              <option value="german">German</option>
+              <option value="portuguese">Portuguese</option>
+              <option value="italian">Italian</option>
+              <option value="chinese">Chinese</option>
+            </select>
+          </label>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="transcribeBtn" disabled>Transcribe audio</button>
+          <button class="btn" id="downloadTranscriptBtn" disabled>Download transcript</button>
+        </div>
+        <div class="progress" id="asrProgress" hidden><div class="progress-bar"></div></div>
+
+        <details class="alt">
+          <summary>Already have the transcript? Paste it instead</summary>
+          <p class="hint">Paste the text and the app will spread it across the audio's length. Quick, but less precise than transcribing.</p>
+          <textarea id="pastedTranscript" rows="5" placeholder="Paste the transcript here…"></textarea>
+          <button class="btn" id="useTranscriptBtn" disabled>Sync with audio</button>
+        </details>
+      </div>
+
+      <!-- PDF / Text → Audio -->
+      <div class="tabpanel" id="tab-pdf" hidden>
+        <label class="file-drop" id="pdfDrop">
+          <input type="file" id="pdfFile" accept="application/pdf,.pdf,.txt,text/plain">
+          <span class="file-drop-text"><strong>Choose a PDF</strong> (or .txt) or drop it here<br><small>Text-based PDFs; scanned images can't be read</small></span>
+        </label>
+        <div class="row" id="pageRow" hidden>
+          <label>Pages
+            <input type="number" id="pageFrom" min="1" value="1"> to
+            <input type="number" id="pageTo" min="1" value="1">
+          </label>
+          <button class="btn" id="loadPagesBtn">Load pages</button>
+        </div>
+        <details class="alt">
+          <summary>Or type / paste any text</summary>
+          <textarea id="pastedText" rows="5" placeholder="Paste a story, article, or assignment…"></textarea>
+          <button class="btn" id="usePastedTextBtn">Use this text</button>
+        </details>
+
+        <div class="row">
+          <label class="grow">Voice <select id="voiceSelect"></select></label>
+        </div>
+        <div class="row">
+          <label class="grow">Speed <input type="range" id="rateInput" min="0.5" max="1.6" step="0.05" value="0.9"> <output id="rateOut">0.9×</output></label>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="ttsPlayBtn" disabled>▶ Read aloud</button>
+          <button class="btn" id="ttsStopBtn" disabled>■ Stop</button>
+        </div>
+      </div>
+
+      <!-- Microphone -->
+      <div class="mic-box">
+        <h2>🎤 Read aloud yourself</h2>
+        <p class="hint">Load any text above, press start, and read. The pointer follows your voice. Click a word to set where you're starting.</p>
+        <div class="row">
+          <button class="btn mic" id="micBtn" disabled>Start listening</button>
+          <span class="mic-level" id="micIndicator" aria-hidden="true"></span>
+        </div>
+        <p class="heard" id="heard" aria-live="polite"></p>
+        <div class="stats" id="micStats" hidden></div>
+      </div>
+    </section>
+
+    <!-- ===== Reader ===== -->
+    <section class="panel reader-panel" aria-label="Reader">
+      <div class="reader-toolbar">
+        <label>Size <input type="range" id="fontSize" min="16" max="44" value="24"></label>
+        <label>Spacing <input type="range" id="lineHeight" min="1.4" max="2.6" step="0.1" value="1.9"></label>
+        <label>Font
+          <select id="fontSelect">
+            <option value="atkinson">Hyperlegible</option>
+            <option value="lexend">Lexend</option>
+            <option value="serif">Serif</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="followToggle" checked> Auto-scroll</label>
+        <label class="check"><input type="checkbox" id="dimToggle" checked> Fade read words</label>
+        <label class="check"><input type="checkbox" id="focusToggle"> Focus line</label>
+      </div>
+      <div class="status" id="status" role="status">Load an audio file or a PDF to begin.</div>
+      <div class="reader" id="reader" tabindex="0">
+        <div class="pointer" id="pointer" aria-hidden="true"></div>
+        <div class="text" id="text">
+          <p class="empty">Your text will appear here. A pointer moves under each word as it's spoken, and you can click any word to jump to it.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
